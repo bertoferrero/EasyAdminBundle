@@ -8,7 +8,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 use function Symfony\Component\String\u;
 
@@ -39,7 +38,7 @@ class MakeAdminDashboardCommand extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $fs = new Filesystem();
@@ -80,7 +79,6 @@ class MakeAdminDashboardCommand extends Command
         $generatedFilePath = $this->classMaker->make(sprintf('%s/%s.php', $controllerDir, $controllerClassName), 'dashboard.tpl', [
             'namespace' => $guessedNamespace,
             'site_title' => $this->getSiteTitle($this->projectDir),
-            'use_php_attributes' => $this->canUsePhpAttributes(),
         ]);
 
         $io = new SymfonyStyle($input, $output);
@@ -91,7 +89,7 @@ class MakeAdminDashboardCommand extends Command
             'Run "make:admin:crud" to generate CRUD controllers and link them from the Dashboard.',
         ]);
 
-        return 0;
+        return Command::SUCCESS;
     }
 
     private function getSiteTitle(string $projectDir): string
@@ -105,33 +103,7 @@ class MakeAdminDashboardCommand extends Command
         return empty($guessedTitle) ? 'EasyAdmin' : $guessedTitle;
     }
 
-    private function canUsePhpAttributes(): bool
-    {
-        return Kernel::VERSION_ID >= 50200 && version_compare($this->phpVersionRequiredByProject(), '8.0', '>=');
-    }
-
-    /**
-     * Based on Symfony\Bundle\MakerBundle\Util\PhpCompatUtil
-     * https://github.com/symfony/maker-bundle/blob/main/src/Util/PhpCompatUtil.php
-     * (c) Jesse Rushlow <jr@rushlow.dev>.
-     */
-    private function phpVersionRequiredByProject(): string
-    {
-        $composerLockPath = sprintf('%s/composer.lock', $this->projectDir);
-        if (!file_exists($composerLockPath)) {
-            return \PHP_VERSION;
-        }
-
-        $lockFileContents = json_decode(file_get_contents($composerLockPath), true);
-
-        $phpVersionRequirement = $lockFileContents['platform-overrides']['php'] ?? $lockFileContents['platform']['php'] ?? \PHP_VERSION;
-        // e.g. $phpVersionRequirement = '>=7.2.5', $phpVersion = '7.2.5'
-        $phpVersion = preg_replace('/[^0-9\.]/', '', $phpVersionRequirement);
-
-        return $phpVersion;
-    }
-
-    private function getCommandHelp()
+    private function getCommandHelp(): string
     {
         return <<<'HELP'
 The <info>%command.name%</info> command creates a new EasyAdmin Dashboard class

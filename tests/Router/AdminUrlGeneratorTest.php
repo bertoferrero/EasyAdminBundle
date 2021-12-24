@@ -14,10 +14,13 @@ use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Kernel;
 
 class AdminUrlGeneratorTest extends WebTestCase
 {
     use ExpectDeprecationTrait;
+
+    protected static $container;
 
     public function testGenerateEmptyUrl()
     {
@@ -111,8 +114,8 @@ class AdminUrlGeneratorTest extends WebTestCase
     {
         $adminUrlGenerator = $this->getAdminUrlGenerator();
 
-        $adminUrlGenerator->setDashboard('App\Controller\Admin\SomeDashboardController');
-        $this->assertSame('http://localhost/another_admin?foo=bar', $adminUrlGenerator->generateUrl());
+        $adminUrlGenerator->setDashboard('App\Controller\Admin\SecureDashboardController');
+        $this->assertSame('http://localhost/secure_admin?foo=bar', $adminUrlGenerator->generateUrl());
     }
 
     public function testUnknownExplicitDashboardController()
@@ -294,7 +297,7 @@ class AdminUrlGeneratorTest extends WebTestCase
 
         $dashboardControllerRegistry = $this->getMockBuilder(DashboardControllerRegistry::class)->disableOriginalConstructor()->getMock();
         $dashboardControllerRegistry->method('getRouteByControllerFqcn')->willReturnMap([
-            ['App\Controller\Admin\SomeDashboardController', 'another_admin'],
+            ['App\Controller\Admin\SecureDashboardController', 'secure_admin'],
         ]);
         $dashboardControllerRegistry->method('getNumberOfDashboards')->willReturn(2);
         $dashboardControllerRegistry->method('getFirstDashboardRoute')->willReturn('admin');
@@ -304,7 +307,8 @@ class AdminUrlGeneratorTest extends WebTestCase
             ['a1b2c3', 'App\Controller\Admin\SomeCrudController'],
         ]);
 
-        $router = self::$container->get('router');
+        $container = Kernel::MAJOR_VERSION >= 6 ? static::getContainer() : self::$container;
+        $router = $container->get('router');
         $uriSigner = new UrlSigner('abc123');
 
         return new AdminUrlGenerator($adminContextProvider, $router, $dashboardControllerRegistry, $crudControllerRegistry, $uriSigner);

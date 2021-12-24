@@ -1,5 +1,5 @@
-# OS: Linux; Symfony: latest stable; PHP: upcoming (still unreleased) version
-name: "Tests - Upcoming PHP version"
+# OS: Linux; Symfony: the upcoming Symfony version (still in 'dev' or 'beta' or 'RC'); PHP: latest stable
+name: "Tests - Upcoming Symfony version"
 
 on:
     pull_request:
@@ -12,8 +12,13 @@ env:
 
 jobs:
     tests:
+        name: "Symfony ${{ matrix.symfony-version }} / PHP ${{ matrix.php-version }}"
         runs-on: 'ubuntu-latest'
         continue-on-error: true
+        strategy:
+            matrix:
+                php-version: ['8.1']
+                symfony-version: ['6.1']
         steps:
             - name: 'Checkout code'
               uses: actions/checkout@v2.3.3
@@ -22,18 +27,20 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   coverage: none
-                  php-version: '8.2'
+                  php-version: ${{ matrix.php-version }}
                   tools: composer:v2
                   extensions: mbstring, intl, pdo, pdo_sqlite, sqlite3
                   ini-values: date.timezone=UTC
 
             - name: 'Install project dependencies'
               env:
-                  SYMFONY_REQUIRE: 5.4
+                  SYMFONY_REQUIRE: ${{ matrix.symfony-version }}
               run: |
                   composer global require --no-progress --no-scripts --no-plugins symfony/flex
-                  composer update --no-interaction --prefer-dist --optimize-autoloader --prefer-stable --ignore-platform-req=php
-                  vendor/bin/simple-phpunit install
+                  composer update --no-interaction --prefer-dist --optimize-autoloader || exit 0
+                  vendor/bin/simple-phpunit install || exit 0
 
             - name: 'Run tests'
+              env:
+                  SYMFONY_DEPRECATIONS_HELPER: 'max[total]=999999'
               run: vendor/bin/simple-phpunit -v || exit 0
